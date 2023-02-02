@@ -1,21 +1,27 @@
 from tree import Node
 
+def and_expresion(world,ast):
+    if(dict_handle(ast.data)):
+        for child in ast.children:
+            if not operators_functions[ast.data](world,child):
+                return False
+    else:
+        for item in world[0]:
+            if item == ast.data:
+                return True
+        return False
 
-"""
-       - "and" with *arbitrarily many parameters*
-       - "or" with *arbitrarily many parameters*
-       - "not" with exactly one parameter 
-       - "=" with exactly two parameters which are variables or constants
-       - "imply" with exactly two parameters 
-       - "when" with exactly two parameters 
-       - "exists" with exactly two parameters, where the first one is a variable specification
-       - "forall" with exactly two parameters, where the first one is a variable specification
-"""
-def and_expresion(ast):
-    pass
-
-def or_expresion(ast):
-    pass
+def or_expresion(world,ast):
+    if(dict_handle(ast.data)):
+        for child in ast.children:
+            if operators_functions[ast.data](world,child):
+                return True    
+    else:
+        for item in world[0]:
+            if item == ast.data:
+                return True    
+        return False
+                
 
 def not_expresion(ast):
     pass
@@ -67,8 +73,12 @@ def make_world(atoms, sets):
     
     return (atom_list,sets)
     
+
 def models(world, condition):
-    return False
+    is_modeled = False
+    if(dict_handle(condition.data)):
+        is_modeled = operators_functions[condition.data](world,condition)
+    return is_modeled   
     
 def substitute(expression, variable, value):
 
