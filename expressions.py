@@ -1,27 +1,30 @@
 from tree import Node
 
 def and_expresion(world,ast):
-    if(dict_handle(ast.data)):
-        for child in ast.children:
-            if not operators_functions[ast.data](world,child):
+    for child in ast.children:
+        were_equal = False
+        if(dict_handle(child.data)):
+            if not operators_functions[child.data](world,child):
                 return False
-    else:
-        for item in world[0]:
-            if item == ast.data:
-                return True
-        return False
+        else:
+            for item in world[0]:
+                if item == child.data:
+                    were_equal = True
+                    break
+            if not were_equal:
+                return False
+    return True
 
 def or_expresion(world,ast):
-    if(dict_handle(ast.data)):
-        for child in ast.children:
-            if operators_functions[ast.data](world,child):
+    for child in ast.children:
+        if(dict_handle(child.data)):
+            if operators_functions[child.data](world,child):
                 return True    
-    else:
-        for item in world[0]:
-            if item == ast.data:
-                return True    
-        return False
-                
+        else:
+            for item in world[0]:
+                if item == child.data:
+                    return True    
+    return False             
 
 def not_expresion(ast):
     pass
