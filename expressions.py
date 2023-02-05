@@ -1,6 +1,6 @@
 from tree import Node
 
-def and_expresion(world,ast):
+def and_expression(world,ast):   #posible agregarle un apply de parametro
     for child in ast.children:
         were_equal = False
         if(dict_handle(child.data)):
@@ -15,7 +15,7 @@ def and_expresion(world,ast):
                 return False
     return True
 
-def or_expresion(world,ast):
+def or_expression(world,ast):
     for child in ast.children:
         if(dict_handle(child.data)):
             if operators_functions[child.data](world,child):
@@ -24,38 +24,82 @@ def or_expresion(world,ast):
             for item in world[0]:
                 if item == child.data:
                     return True    
-    return False             
+    return False
+                
 
-def not_expresion(ast):
+def not_expression(world,ast):  #agregarle un apply de parametro
+    for item in world[0]:
+        if item == ast.children[0].data:
+            return False   
+    return True
+
+def equal_expression(world, ast):
+    if(ast.children[0].data == ast.children[1].data):
+        return True
+    return False
+
+def imply_expression(world,ast):
+    print(ast.children[0].data)
+    print(ast.children[1].data)
+    if(dict_handle(ast.children[1].data)):
+        if operators_functions[ast.children[1].data](world,ast.children[1]):
+            return True    
+    else:
+        for item in world[0]:
+            if item == ast.children[1].data:
+                return True 
+
+    if(dict_handle(ast.children[0].data)):
+        if operators_functions[ast.children[0].data](world,ast.children[0]):
+            return False    
+    else:
+        for item in world[0]:
+            if item == ast.children[0].data:
+                return False
+
+    return True #llegar aqui significa que ambos son falsos, por lo tanto en la expresion implica es verdadero
+
+
+def when_expression(world,ast):
+    if(models(world,ast.children[0].data)):
+        return True
+    return False
+
+def exists_expression(ast):
     pass
 
-def equal_expresion(ast):
+def forall_expression(world,ast):  #se le deberia agregar un apply
+    values = world[1][ast.children[0].data[2]]
+    for value in values:
+        if not models(world,substitute(ast.children[1],ast.children[0].data[0],value)):
+            return False
+    return True
+
+
+def apply_and():
     pass
 
-def imply_expresion(ast):
+def apply_not():
     pass
 
-def when_expresion(ast):
+def apply_when():
     pass
 
-def exists_expresion(ast):
+def apply_forall():
     pass
-
-def forall_expresion(ast):
-    pass
-
 
 operators_dict = {"and": True , "or": True , "not" : True, "=" : True, "imply": True , "when" : True, "exists" : True , "forall" : True}
 
-operators_functions = {"and": and_expresion , "or": or_expresion , "not" : not_expresion, "=" : equal_expresion, "imply": imply_expresion , "when" : when_expresion, "exists" : exists_expresion , "forall" : forall_expresion}
+operators_functions = {"and": and_expression , "or": or_expression , "not" : not_expression, "=" : equal_expression, "imply": imply_expression , "when" : when_expression, "exists" : exists_expression , "forall" : forall_expression}
 
-
+apply_functions =  {"and": apply_and, "not" : apply_not, "when" : apply_when, "forall" : apply_forall}
 
 def make_expression(ast):
-    root = Node(ast[0])
     if(dict_handle(ast[0])):
+        root = Node(ast[0])
         make_expression_recursive(ast[1:],root)
-    return root
+        return root
+    return Node(ast)
     
 def make_expression_recursive(ast,parent):
     for item in ast:
@@ -63,7 +107,8 @@ def make_expression_recursive(ast,parent):
             child = parent.add_new_child(Node(item[0]))
             make_expression_recursive(item[1:],child)
         else: #In other case it means is a atom and it has to be a leaf
-            parent.add_new_child(Node(read_atom(item)))
+            #parent.add_new_child(Node(read_atom(item)))
+            parent.add_new_child(Node(item))
 
 """
 This function receives a list of atomic propositions, and a dictionary of sets and returns an object representing a logical world.
@@ -72,7 +117,7 @@ def make_world(atoms, sets):
     atom_list = []
 
     for atom in atoms:
-        atom_list.append(read_atom(atom))
+        atom_list.append(atom)
     
     return (atom_list,sets)
     
@@ -81,14 +126,42 @@ def models(world, condition):
     is_modeled = False
     if(dict_handle(condition.data)):
         is_modeled = operators_functions[condition.data](world,condition)
-    return is_modeled   
+    return is_modeled    
     
 def substitute(expression, variable, value):
+    if(dict_handle(expression.data)):
+        root = Node(expression.data)
+        for child in expression.children:
+            new_child = Node(child.data)
+            new_child = root.add_new_child(recursive_sustitute(child, variable, value, new_child))
+    else:
+        new_expression = []
+        for item in expression.data:
+            if item == variable:
+                new_expression.append(value)
+            else:
+                new_expression.append(item)
+        new_expression = tuple(new_expression)
+        root = Node(new_expression)
+    return root
 
-    return expression
+def recursive_sustitute(expression, variable, value, tree):
+    if(dict_handle(expression.data)):
+        for child in expression.children:
+            new_child = Node(child.data)
+            new_child = tree.add_new_child(recursive_sustitute(child, variable, value, new_child))
+    else:
+        new_expression = []
+        for item in expression.data:
+            if item == variable:
+                new_expression.append(value)
+            else:
+                new_expression.append(item)
+        new_expression = tuple(new_expression)
+    return Node(new_expression)
+
     
 def apply(world, effect):
-    
     return world
 
 
