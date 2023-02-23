@@ -1,5 +1,8 @@
 from tree import Node
 
+#expresion functions -----------------------------------------------------------------------
+#every function here (except not and equal) are recursive, verify if children is a atom (stop condition, means is a leaf, function dict_handle is used to determine that) or if it another expressions.
+
 def and_expression(world,ast):   
     for child in ast.children:
         were_equal = False
@@ -47,6 +50,8 @@ def imply_expression(world,ast):
             if item == ast.children[1].data:
                 return True 
 
+    #if the code gets here, means B is false
+
     if(dict_handle(ast.children[0].data)):
         if operators_functions[ast.children[0].data](world,ast.children[0]):
             return False    
@@ -58,16 +63,24 @@ def imply_expression(world,ast):
     return True #This means that both A and B are false
 
 
-def exists_expression(ast):
-    pass
+def exists_expression(world,ast):
+    values = world[1][ast.children[0].data[2]] #The values in the dictionary are obtained
+    for value in values:
+        if models(world,substitute(ast.children[1],ast.children[0].data[0],value)):
+            return True
+    return False
 
 def forall_expression(world,ast):  
-    values = world[1][ast.children[0].data[2]]
+    values = world[1][ast.children[0].data[2]] #The values in the dictionary are obtained
     for value in values:
         if not models(world,substitute(ast.children[1],ast.children[0].data[0],value)):
             return False
     return True
 
+
+#apply functions ------------------------------------------------------------------------------------------------
+#These functions create a new Tree in base of the change the apply function wants to implement
+#every function here (except not) are recursive, verify if children is a atom (stop condition, means is a leaf, function dict_handle is used to determine that) or if it another expressions.
 
 def apply_and(world,new_world,effect):
     for child in effect.children:
@@ -91,15 +104,24 @@ def apply_forall(world,new_world,effect):
     for value in values:
         temp_world = apply(new_world,substitute(effect.children[1],effect.children[0].data[0],value))
         for item in temp_world[0]:
-            new_world[0].append(item) if item not in new_world[0] else new_world[0]
+            new_world[0].append(item) if item not in new_world[0] else new_world[0] #append the new items found in every sustitution 
 
     
+#dictionaries --------------------------------------------------------------------------------------------------------- 
+
+#these are used as a switch  
+
 operators_dict = {"and": True , "or": True , "not" : True, "=" : True, "imply": True , "when" : True, "exists" : True , "forall" : True}
 
 operators_functions = {"and": and_expression , "or": or_expression , "not" : not_expression, "=" : equal_expression, "imply": imply_expression, "exists" : exists_expression , "forall" : forall_expression}
 
 apply_functions =  {"and": apply_and, "not" : apply_not, "when" : apply_when, "forall" : apply_forall}
 
+#functions --------------------------------------------------------------------------------------------------------------
+
+"""
+This function receives a sequence (list or tuple) representing the abstract syntax tree of a logical expression and returns an expression object suitable for further processing. 
+"""
 def make_expression(ast):
     if(dict_handle(ast[0])):
         root = Node(ast[0])
@@ -126,15 +148,21 @@ def make_world(atoms, sets):
     
     return (atom_list,sets)
     
-
+"""
+This function takes a world and a logical expression, and determines if the expression holds in the given world, i.e. if the world models the condition.
+"""
 def models(world, condition):
     is_modeled = False
     if(dict_handle(condition.data)):
-        is_modeled = operators_functions[condition.data](world,condition)
+        is_modeled = operators_functions[condition.data](world,condition) #calls the respective expression functions using the dictionary 
     elif condition.data in world[0]:
         is_modeled = True
     return is_modeled    
     
+"""
+This function takes an expression, the name of a variable (usually starting with a question mark), and a constant value, and returns a *new* expression with all occurences of the variable 
+replaced with the value
+"""
 def substitute(expression, variable, value):
     if(dict_handle(expression.data)):
         root = Node(expression.data)
@@ -142,7 +170,8 @@ def substitute(expression, variable, value):
             new_child = Node(child.data)
             root.add_new_child(recursive_sustitute(child, variable, value, new_child))
     else:
-        if not expression.data[0] == "?":
+        new_expression = []
+        if not expression.data[0] == "?": #condition to stop splitting the token when founds ? 
             for item in expression.data:
                 if item == variable:
                     new_expression.append(value)
@@ -161,10 +190,10 @@ def recursive_sustitute(expression, variable, value, tree):
     if(dict_handle(expression.data)):
         for child in expression.children:
             new_child = Node(child.data)
-            new_child = tree.add_new_child(recursive_sustitute(child, variable, value, new_child))
+            tree.add_new_child(recursive_sustitute(child, variable, value, new_child))
     else:
         new_expression = []
-        if not expression.data[0] == "?":
+        if not expression.data[0] == "?": #condition to stop splitting the token when founds ? 
             for item in expression.data:
                 if item == variable:
                     new_expression.append(value)
@@ -178,37 +207,30 @@ def recursive_sustitute(expression, variable, value, tree):
         new_expression = tuple(new_expression)
         return Node(new_expression)
     return tree
-    
+
+"""
+This function takes a world, and an expression, and returns a new world, with the expression used to change the world. 
+"""
 def apply(world, effect):
-    new_world = (world[0].copy(),world[1].copy())
+    new_world = (world[0].copy(),world[1].copy()) #this is to avoid the member by member copy 
 
     if(dict_handle(effect.data)):
-        apply_functions[effect.data](world,new_world,effect)
+        apply_functions[effect.data](world,new_world,effect) ##calls the respective apply functions using the dictionary 
     elif effect.data not in new_world:
         new_world[0].append(effect.data)
 
     return new_world
 
-
 """
-This functions reads an atom in a tuple form ("on","a","b") and convert it to "on(a,b)"
+This functions receive an expressions and returns false if is an Atom and True otherwise
 """
-def read_atom(atom):
-    conv_atom = atom[0] + "("
-    for i in range(1,len(atom)):
-        conv_atom += atom[i]
-        if(i < len(atom) - 1):
-            conv_atom += ","
-    conv_atom += ")"
-    return conv_atom
-
-
 def dict_handle(exp):
     try:
         return operators_dict[exp]
     except:
         return False
 
+#Testing ------------------------------------------------------------------------------------------------------------
 
 if __name__ == "__main__":
     exp = make_expression(("or", ("on", "a", "b"), ("on", "a", "d")))
